@@ -340,7 +340,8 @@ export function AskComposer({
           <ComposerToken icon={tokenIcon(token.kind, token.id)} token={token} variant="chip" />
         )}
       />
-      <ComposerPopup className={dropdownMotion}>
+      {/* Below the sentence: the composer sits near the top, so "above" runs out of room. */}
+      <ComposerPopup className={dropdownMotion} side="bottom">
         <SlidingHighlight list={list} />
         <ComposerList className="relative" ref={setList}>
           {(item: ComposerItemValue) => <SuggestionItem item={item} key={item.id} />}
