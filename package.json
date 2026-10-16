@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:parser": "npx tsx scripts/check-parser.ts"
+    "check:parser": "npx tsx scripts/check-parser.ts",
+    "check:groups": "npx tsx scripts/check-groups.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

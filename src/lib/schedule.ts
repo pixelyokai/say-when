@@ -14,6 +14,8 @@ import {
 export type Person = {
   id: string;
   name: string;
+  email?: string;
+  department?: string;
   role: string;
   city: string;
   timeZone: string;
@@ -23,10 +25,8 @@ export type Person = {
   isViewer?: boolean;
 };
 
-export type Team = { id: string; name: string; members: string[] };
-
 export const PEOPLE: Person[] = data.people;
-export const TEAMS: Team[] = data.teams;
+export const DEPARTMENTS: string[] = data.departments;
 
 export function firstName(person: Person): string {
   return person.name.split(" ")[0];

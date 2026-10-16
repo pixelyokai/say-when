@@ -238,6 +238,9 @@
   }
   html {
     @apply font-sans;
+    /* Keep the scrollbar's space reserved, so the page doesn't shift sideways when
+       content grows past the fold or a dialog locks scrolling. */
+    scrollbar-gutter: stable;
   }
 }
 
@@ -322,7 +325,74 @@
   transition: transform 200ms var(--motion-ease-out);
 }
 
+/* Toasts, after beui.dev's animated toast stack. coss positions the stack with
+   `transform`; these use the separate `translate`, `scale` and `filter`
+   properties on top, so stacking, hover-expand and swipe keep working.
+   Enter: rise 22px from .96 and unblur (280ms). Leave: slide 32px right,
+   shrink and blur (180ms). Stack moves: near-critically-damped, 350ms. */
+:root {
+  --toast-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-slot="toast-viewport"] > [data-position] {
+  transition:
+    transform 350ms var(--toast-ease),
+    translate 280ms var(--toast-ease),
+    scale 280ms var(--toast-ease),
+    filter 280ms var(--toast-ease),
+    opacity 280ms var(--toast-ease),
+    height 150ms var(--toast-ease),
+    background-color 350ms var(--toast-ease);
+}
+/* Arriving: the newest toast is the front one, whose resting transform is none. */
+[data-slot="toast-viewport"] > [data-position][data-starting-style] {
+  transform: none;
+  translate: 0 22px;
+  scale: 0.96;
+  filter: blur(10px);
+  opacity: 0;
+}
+/* Leaving on its own (timeout or close): stay in the stack's place, then drift right. */
+[data-slot="toast-viewport"] > [data-position][data-ending-style]:not([data-swipe-direction]):not([data-limited]) {
+  translate: 32px 0;
+  scale: 0.96;
+  filter: blur(8px);
+  opacity: 0;
+  transition-duration: 180ms;
+}
+[data-slot="toast-viewport"]
+  > [data-position*="bottom"][data-ending-style]:not([data-swipe-direction]):not([data-limited]):not([data-expanded]) {
+  transform: translateX(var(--toast-swipe-movement-x))
+    translateY(
+      calc(
+        var(--toast-swipe-movement-y) - (var(--toast-index) * var(--toast-peek)) -
+          (var(--toast-shrink) * var(--toast-calc-height))
+      )
+    )
+    scale(var(--toast-scale));
+}
+[data-slot="toast-viewport"]
+  > [data-position*="top"][data-ending-style]:not([data-swipe-direction]):not([data-limited]):not([data-expanded]) {
+  transform: translateX(var(--toast-swipe-movement-x))
+    translateY(
+      calc(
+        var(--toast-swipe-movement-y) + (var(--toast-index) * var(--toast-peek)) +
+          (var(--toast-shrink) * var(--toast-calc-height))
+      )
+    )
+    scale(var(--toast-scale));
+}
+[data-slot="toast-viewport"]
+  > [data-position][data-expanded][data-ending-style]:not([data-swipe-direction]):not([data-limited]) {
+  transform: translateX(var(--toast-swipe-movement-x)) translateY(var(--toast-calc-offset-y));
+}
+
 @media (prefers-reduced-motion: reduce) {
+  [data-slot="toast-viewport"] > [data-position][data-starting-style],
+  [data-slot="toast-viewport"] > [data-position][data-ending-style] {
+    translate: 0 0;
+    scale: 1;
+    filter: none;
+  }
   .dropdown-motion[data-starting-style],
   .dropdown-motion[data-ending-style],
   [data-slot="select-popup"][data-starting-style],

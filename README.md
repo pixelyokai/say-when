@@ -20,11 +20,12 @@ This is a side project. I wanted to see what scheduling in Cal.com could feel li
 - Drag the time slider and every person's local time moves with it.
 - Slots are ranked by how comfortable the hour is for each person. Being free at 11pm still counts as a bad slot.
 - If nothing works, it tells you the smallest change that would fix it, like dropping one rule or one person.
+- Groups. Pick a few people from different teams, give the mix a name, and `@` it in the sentence like a person. You can create, edit and delete them from the Groups button.
 - A few extras I added along the way: a rotating time when the same person keeps getting the late call, a link guests can open to pick times in their own time zone, and "same as last time" for groups you've met before.
 
 ## What isn't real
 
-The four people (Lena in Berlin, Marcus in San Francisco, Priya in Bengaluru, Oliver in Sydney) and their calendars are made up. Nothing gets sent anywhere. There's no backend. It all runs in your browser, and the little it remembers (past meetings, your city) stays in local storage.
+The ten people and their calendars are made up. They work in Marketing, Engineering, Product and Customer care, spread from San Francisco to Sydney. Nothing gets sent anywhere. There's no backend. It all runs in your browser, and the little it remembers (your groups, past meetings, your city) stays in local storage.
 
 ## Built with
 

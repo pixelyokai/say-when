@@ -1,17 +1,43 @@
 {
   "people": [
     {
-      "id": "lena",
-      "name": "Lena Hoffmann",
-      "role": "Product designer",
-      "city": "Berlin",
-      "timeZone": "Europe/Berlin",
+      "id": "sofia",
+      "name": "Sofia Alvarez",
+      "email": "sofia@acme.example",
+      "department": "Marketing",
+      "role": "Marketing lead",
+      "city": "Madrid",
+      "timeZone": "Europe/Madrid",
+      "workStart": 540,
+      "workEnd": 1080
+    },
+    {
+      "id": "jordan",
+      "name": "Jordan Blake",
+      "email": "jordan@acme.example",
+      "department": "Marketing",
+      "role": "Growth marketer",
+      "city": "New York",
+      "timeZone": "America/New_York",
       "workStart": 540,
       "workEnd": 1050
     },
     {
+      "id": "aiko",
+      "name": "Aiko Tanaka",
+      "email": "aiko@acme.example",
+      "department": "Marketing",
+      "role": "Content marketer",
+      "city": "Tokyo",
+      "timeZone": "Asia/Tokyo",
+      "workStart": 570,
+      "workEnd": 1080
+    },
+    {
       "id": "marcus",
       "name": "Marcus Reed",
+      "email": "marcus@acme.example",
+      "department": "Engineering",
       "role": "Engineering lead",
       "city": "San Francisco",
       "timeZone": "America/Los_Angeles",
@@ -21,6 +47,8 @@
     {
       "id": "priya",
       "name": "Priya Raman",
+      "email": "priya@acme.example",
+      "department": "Engineering",
       "role": "Frontend engineer",
       "city": "Bengaluru",
       "timeZone": "Asia/Kolkata",
@@ -28,17 +56,65 @@
       "workEnd": 1140
     },
     {
+      "id": "lena",
+      "name": "Lena Hoffmann",
+      "email": "lena@acme.example",
+      "department": "Product",
+      "role": "Product designer",
+      "city": "Berlin",
+      "timeZone": "Europe/Berlin",
+      "workStart": 540,
+      "workEnd": 1050
+    },
+    {
       "id": "oliver",
       "name": "Oliver Chen",
+      "email": "oliver@acme.example",
+      "department": "Product",
       "role": "Design engineer",
       "city": "Sydney",
       "timeZone": "Australia/Sydney",
       "workStart": 510,
       "workEnd": 1020
+    },
+    {
+      "id": "daniel",
+      "name": "Daniel Okafor",
+      "email": "daniel@acme.example",
+      "department": "Product",
+      "role": "Product manager",
+      "city": "London",
+      "timeZone": "Europe/London",
+      "workStart": 540,
+      "workEnd": 1050
+    },
+    {
+      "id": "grace",
+      "name": "Grace Kim",
+      "email": "grace@acme.example",
+      "department": "Customer care",
+      "role": "Support lead",
+      "city": "Toronto",
+      "timeZone": "America/Toronto",
+      "workStart": 480,
+      "workEnd": 990
+    },
+    {
+      "id": "ravi",
+      "name": "Ravi Menon",
+      "email": "ravi@acme.example",
+      "department": "Customer care",
+      "role": "Support specialist",
+      "city": "Dubai",
+      "timeZone": "Asia/Dubai",
+      "workStart": 540,
+      "workEnd": 1080
     }
   ],
-  "teams": [
-    { "id": "design", "name": "Design team", "members": ["lena", "oliver"] },
-    { "id": "eng", "name": "Engineering team", "members": ["marcus", "priya"] }
+  "departments": ["Marketing", "Engineering", "Product", "Customer care"],
+  "starterGroups": [
+    { "id": "design", "name": "Design", "members": ["lena", "oliver"] },
+    { "id": "eng", "name": "Eng", "members": ["marcus", "priya"] },
+    { "id": "launch-crew", "name": "Launch crew", "members": ["sofia", "jordan", "lena", "daniel", "grace"] }
   ]
 }

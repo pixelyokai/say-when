@@ -24,6 +24,8 @@ import { PersonAvatar } from "@/components/booker/person-avatar";
 import { type SlotFilter, SlotFilterControl, SlotList } from "@/components/booker/slot-list";
 import { announceVote, AskGuestsDialog, PollStatus } from "@/components/booker/ask-guests";
 import { RotationCard } from "@/components/booker/rotation-card";
+import { GroupsSheet, type GroupsView } from "@/components/booker/groups-sheet";
+import { type Group, loadGroups, subscribeToGroups } from "@/lib/groups";
 import {
   bookingFrom,
   describeHabit,
@@ -48,6 +50,7 @@ import {
   startPoll,
   subscribeToVotes,
 } from "@/lib/poll";
+import { afterGesture } from "@/lib/after-gesture";
 import { proposeRotation } from "@/lib/rotation";
 import {
   type Ask,
@@ -167,11 +170,29 @@ export function Booker() {
     } catch {}
   }, []);
   const [value, setValue] = useState<ComposerValue>([]);
-  const typed = useMemo(() => parseAsk(value), [value]);
+  // Your groups: saved in this browser, edited in the Groups sheet, mentioned with @.
+  const [savedGroups, setSavedGroups] = useState<Group[]>(() => loadGroups());
+  useEffect(() => subscribeToGroups(setSavedGroups), []);
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const [groupsView, setGroupsView] = useState<GroupsView>({ mode: "list" });
+  const openGroups = useCallback((view: GroupsView = { mode: "list" }) => {
+    setGroupsView(view);
+    afterGesture(() => setGroupsOpen(true));
+  }, []);
+
+  const typed = useMemo(() => parseAsk(value, savedGroups), [value, savedGroups]);
 
   // Learn from the group: past bookings in this browser (plus a few samples).
   const [history, setHistory] = useState(() => loadHistory(Date.now()));
   const groups = useMemo(() => recentGroups(history), [history]);
+  const scheduleGroup = useCallback((group: Group) => {
+    setGroupsOpen(false);
+    setValue([
+      { type: "text", text: "30 min with " },
+      { type: "mention", id: group.id, label: group.name, trigger: "@", kind: "team", data: group.members.join(",") },
+      { type: "text", text: " next week" },
+    ]);
+  }, []);
   // "same as last time" fills whatever the sentence left out from the last matching meeting.
   const repeatOf = typed.repeat ? lastBookingWith(typed.people, history) : null;
   const parsed = useMemo(
@@ -384,7 +405,7 @@ export function Booker() {
         organizerTz: viewer.timeZone,
       }),
     );
-    setLinksOpen(true);
+    afterGesture(() => setLinksOpen(true));
   }, [ask.durationMin, ask.people, slots, viewer.timeZone]);
 
   const yesFor = useCallback(
@@ -419,7 +440,7 @@ export function Booker() {
                   value: "book",
                   label: `Book ${slotLabel(selected, viewer.timeZone)}`,
                   shortcut: "↵",
-                  run: () => setBooking(selected),
+                  run: () => afterGesture(() => setBooking(selected)),
                 },
                 { value: "copy", label: "Copy the invite", run: copyInvite },
               ]
@@ -454,6 +475,18 @@ export function Booker() {
         })),
       },
       {
+        value: "Groups",
+        items: [
+          { value: "groups-manage", label: "Manage groups", run: () => openGroups() },
+          { value: "groups-new", label: "New group", run: () => openGroups({ mode: "edit", id: null }) },
+          ...savedGroups.map((g) => ({
+            value: `group-${g.id}`,
+            label: `Schedule with ${g.name} (${g.members.length})`,
+            run: () => scheduleGroup(g),
+          })),
+        ],
+      },
+      {
         value: "Together",
         items: [
           ...(hasGuests && slots.length
@@ -478,7 +511,7 @@ export function Booker() {
         ],
       },
     ],
-    [askGuests, bookSeries, copyInvite, groups, hasGuests, parsed.people, selected, series, slots.length, value.length, viewer.timeZone],
+    [askGuests, bookSeries, copyInvite, groups, hasGuests, openGroups, savedGroups, scheduleGroup, parsed.people, selected, series, slots.length, value.length, viewer.timeZone],
   );
 
   const pollPanel = poll && (
@@ -496,7 +529,7 @@ export function Booker() {
           setCursor((start - d.getTime()) / MINUTE);
         }
       }}
-      onShowLinks={() => setLinksOpen(true)}
+      onShowLinks={() => afterGesture(() => setLinksOpen(true))}
       selectedStart={selected?.start ?? null}
       state={poll}
       viewer={viewer}
@@ -527,24 +560,40 @@ export function Booker() {
           <h1 className="font-heading font-semibold text-base">Book in one sentence</h1>
           <Badge variant="outline">Concept</Badge>
         </div>
-        <Button onClick={() => setPaletteOpen(true)} size="sm" variant="outline">
-          <CommandIcon aria-hidden="true" />
-          Commands
-          <KbdGroup className="max-sm:hidden">
-            <Kbd>⌘</Kbd>
-            <Kbd>K</Kbd>
-          </KbdGroup>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => openGroups()} size="sm" variant="outline">
+            <UsersRoundIcon aria-hidden="true" />
+            Groups
+            <Badge className="max-sm:hidden" variant="secondary">
+              {savedGroups.length}
+            </Badge>
+          </Button>
+          <Button
+            aria-label="Commands"
+            onClick={() => afterGesture(() => setPaletteOpen(true))}
+            size="sm"
+            variant="outline"
+          >
+            <CommandIcon aria-hidden="true" />
+            <span className="max-sm:sr-only">Commands</span>
+            <KbdGroup className="max-sm:hidden">
+              <Kbd>⌘</Kbd>
+              <Kbd>K</Kbd>
+            </KbdGroup>
+          </Button>
+        </div>
       </header>
 
       <section className="flex flex-col gap-3">
         <AskComposer
           canBook={!!selected && hasGuests}
-          groups={groups}
           now={now}
+          onNewGroup={() => openGroups({ mode: "edit", id: null })}
           onPickDate={(d) => setValue((v) => withDate(v, d))}
-          onSubmit={() => selected && hasGuests && setBooking(selected)}
+          onSubmit={() => selected && hasGuests && afterGesture(() => setBooking(selected))}
           onValueChange={setValue}
+          recentGroups={groups}
+          savedGroups={savedGroups}
           value={value}
         />
         <div className="flex min-h-6 flex-wrap items-center gap-1.5" aria-live="polite">
@@ -712,7 +761,7 @@ export function Booker() {
             {shown.length > 0 ? (
               <SlotList
                 usualFor={(slot) => usualMatch(slot, habit)}
-                onBook={setBooking}
+                onBook={(slot) => afterGesture(() => setBooking(slot))}
                 onSelect={selectSlot}
                 selectedStart={selected?.start ?? null}
                 slots={shown}
@@ -767,6 +816,16 @@ export function Booker() {
           viewer={viewer}
         />
       )}
+      <GroupsSheet
+        groups={savedGroups}
+        now={now}
+        onGroupsChange={setSavedGroups}
+        onOpenChange={setGroupsOpen}
+        onSchedule={scheduleGroup}
+        onViewChange={setGroupsView}
+        open={groupsOpen}
+        view={groupsView}
+      />
       <CommandPalette groups={palette} onOpenChange={setPaletteOpen} open={paletteOpen} />
     </main>
   );

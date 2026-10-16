@@ -1,0 +1,22 @@
+import { parseAsk } from "@/lib/parse";
+import { createGroup, deleteGroup, STARTER_GROUPS, updateGroup, validateGroup } from "@/lib/groups";
+
+const text = (t: string) => [{ type: "text" as const, text: t }];
+let groups = STARTER_GROUPS;
+console.log("validate empty:", validateGroup({ name: "", members: [] }, groups, null));
+console.log("validate dupe:", validateGroup({ name: "design", members: ["lena", "ravi"] }, groups, null));
+console.log("validate person name:", validateGroup({ name: "Lena", members: ["lena", "ravi"] }, groups, null));
+groups = createGroup(groups, { name: "Support + Product", members: ["grace", "ravi", "daniel"] });
+console.log("created:", groups.at(-1));
+groups = createGroup(groups, { name: "Support Product", members: ["grace", "ravi"] });
+console.log("same slug gets suffix:", groups.at(-1)?.id);
+groups = updateGroup(groups, "support-product", { name: "Care x Product", members: ["grace", "daniel"] });
+console.log("renamed keeps id:", groups.find((g) => g.id === "support-product"));
+const token = [{ type: "text" as const, text: "30 min with " }, { type: "mention" as const, id: "support-product", label: "Care x Product", trigger: "@", kind: "team", data: "grace,ravi,daniel" }];
+console.log("token live:", parseAsk(token, groups).people);
+groups = deleteGroup(groups, "support-product");
+console.log("token after delete (falls back to saved members):", parseAsk(token, groups).people);
+console.log("typed '@launch-crew':", parseAsk(text("30 min with @launch-crew"), groups).people);
+console.log("typed 'the launch crew':", parseAsk(text("the launch crew next week"), groups).people);
+console.log("'design review' (should be empty):", parseAsk(text("design review with nobody"), groups).people);
+console.log("'design team':", parseAsk(text("design team tomorrow"), groups).people);

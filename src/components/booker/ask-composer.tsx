@@ -7,6 +7,7 @@ import {
   HistoryIcon,
   MapPinIcon,
   PhoneIcon,
+  PlusIcon,
   SlashIcon,
   UserRoundIcon,
   UsersRoundIcon,
@@ -34,7 +35,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Popover, PopoverPopup, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { firstName, initials, PEOPLE, TEAMS } from "@/lib/schedule";
+import type { Group } from "@/lib/groups";
+import { firstName, initials, PEOPLE } from "@/lib/schedule";
 import {
   SlidingHighlight,
   slidingItemClassName,
@@ -52,14 +54,35 @@ const TYPES = [
   { id: "in-person", label: "In person" },
 ];
 
-function triggers(now: number, groups: Habit[]): ComposerTrigger[] {
+export const NEW_GROUP_ACTION = "new-group";
+
+function triggers(now: number, recent: Habit[], saved: Group[]): ComposerTrigger[] {
   return [
     // `#` has no list: it opens the date picker (see onQueryChange).
     { character: "#", items: [], showEmpty: false },
     {
       character: "@",
       items: [
-        ...groups.map((habit) => ({
+        // Your saved groups first: they're the reason to reach for @.
+        ...saved.map((group) => ({
+          id: group.id,
+          label: group.name,
+          description: `Group · ${group.members.length} people`,
+          kind: "team",
+          // Members travel with the token, so a sentence survives the group being deleted.
+          data: group.members.join(","),
+        })),
+        // Recent mixes, unless one of your groups already covers exactly those people.
+        ...recent
+          .filter(
+            (habit) =>
+              !saved.some(
+                (g) =>
+                  g.members.length === habit.people.length &&
+                  g.members.every((id) => habit.people.includes(id)),
+              ),
+          )
+          .map((habit) => ({
           id: habit.people.join("+"),
           label: groupLabel(habit.people),
           description: `Recent · ${describeHabit(habit)}`,
@@ -68,15 +91,16 @@ function triggers(now: number, groups: Habit[]): ComposerTrigger[] {
         ...PEOPLE.map((person) => ({
           id: person.id,
           label: firstName(person),
-          description: `${person.city} · ${formatTime(now, person.timeZone)}`,
+          description: `${person.department} · ${person.city} · ${formatTime(now, person.timeZone)}`,
           kind: "person",
         })),
-        ...TEAMS.map((team) => ({
-          id: team.id,
-          label: team.id,
-          description: `${team.name} · ${team.members.length} people`,
-          kind: "team",
-        })),
+        {
+          id: NEW_GROUP_ACTION,
+          label: "New group…",
+          description: "Mix people from any team",
+          type: "action" as const,
+          kind: "new-group",
+        },
       ],
     },
     {
@@ -119,6 +143,7 @@ function triggers(now: number, groups: Habit[]): ComposerTrigger[] {
 function tokenIcon(kind: string | undefined, id: string) {
   if (kind === "team" || kind === "group") return <UsersRoundIcon aria-hidden="true" />;
   if (kind === "repeat") return <HistoryIcon aria-hidden="true" />;
+  if (kind === "new-group") return <PlusIcon aria-hidden="true" />;
   if (kind === "date") return <CalendarIcon aria-hidden="true" />;
   if (kind === "duration") return <ClockIcon aria-hidden="true" />;
   if (kind === "type") {
@@ -165,8 +190,31 @@ function withoutHashTrigger(value: ComposerValue): ComposerValue {
   return value;
 }
 
+/** Removes the last occurrence of a typed trigger and its query, e.g. "@new". */
+function withoutTypedTrigger(value: ComposerValue, typed: string): ComposerValue {
+  for (let i = value.length - 1; i >= 0; i--) {
+    const part = value[i];
+    if (part.type !== "text") continue;
+    const at = part.text.lastIndexOf(typed);
+    if (at === -1) continue;
+    const text = part.text.slice(0, at) + part.text.slice(at + typed.length);
+    return [...value.slice(0, i), { type: "text", text }, ...value.slice(i + 1)];
+  }
+  return value;
+}
+
+/** Back to the sentence with the caret at its end, ready for the next words. */
 function focusComposerInput() {
-  document.querySelector<HTMLElement>('[data-slot="composer-input"]')?.focus();
+  const input = document.querySelector<HTMLElement>('[data-slot="composer-input"]');
+  if (!input) return;
+  input.focus();
+  // focus() on a contenteditable puts the caret at the start.
+  const range = document.createRange();
+  range.selectNodeContents(input);
+  range.collapse(false);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
 }
 
 /** Opens from the Date button, or from typing `#` in the sentence. */
@@ -242,16 +290,20 @@ export function AskComposer({
   onSubmit,
   now,
   canBook,
-  groups,
+  recentGroups,
+  savedGroups,
   onPickDate,
+  onNewGroup,
 }: {
   value: ComposerValue;
   onValueChange: (value: ComposerValue) => void;
   onSubmit: () => void;
   now: number;
   canBook: boolean;
-  groups: Habit[];
+  recentGroups: Habit[];
+  savedGroups: Group[];
   onPickDate: (date: Date) => void;
+  onNewGroup: () => void;
 }) {
   const [list, setList] = useListElement();
   const [dateOpen, setDateOpen] = useState(false);
@@ -268,10 +320,16 @@ export function AskComposer({
       onQueryChange={(query) => {
         if (query?.character === "#" && query.text === "") setDateOpen(true);
       }}
+      onAction={(item, query) => {
+        if (item.id !== NEW_GROUP_ACTION) return;
+        // Take the "@new" the visitor typed back out before opening the editor.
+        onValueChange(withoutTypedTrigger(value, query.character + query.text));
+        onNewGroup();
+      }}
       onSubmit={onSubmit}
       onValueChange={onValueChange}
       submitDisabled={!canBook}
-      triggers={triggers(now, groups)}
+      triggers={triggers(now, recentGroups, savedGroups)}
       value={value}
     >
       <ComposerInput

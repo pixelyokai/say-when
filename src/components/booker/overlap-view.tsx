@@ -316,8 +316,11 @@ export function OverlapView({
               })}
             </div>
 
-            {/* Strips */}
-            <div className="relative" style={{ height }}>
+            {/* Strips. Clipped sideways: the cursor layer is full-width and moves with
+                translateX, so without this it pokes past the edge and the scroll area
+                grows an empty run to its right. (clip, not hidden: no scroll container,
+                and the cursor's dot can still sit above the strips.) */}
+            <div className="relative overflow-x-clip" style={{ height }}>
               <svg
                 aria-hidden="true"
                 className="absolute inset-0 size-full"

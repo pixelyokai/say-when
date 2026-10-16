@@ -1,5 +1,6 @@
 import type { ComposerValue } from "@/components/ui/composer";
-import { type DaysSpec, PEOPLE, TEAMS, type WindowSpec } from "@/lib/schedule";
+import { type Group, STARTER_GROUPS } from "@/lib/groups";
+import { type DaysSpec, PEOPLE, type WindowSpec } from "@/lib/schedule";
 
 /** Same shape the language model is asked to return. */
 export type ParsedAsk = {
@@ -122,17 +123,18 @@ function addPerson(list: string[], id: string): void {
   if (!list.includes(id)) list.push(id);
 }
 
-function addMention(list: string[], id: string): void {
-  const team = TEAMS.find((t) => t.id === id);
-  if (team) for (const member of team.members) addPerson(list, member);
-  else if (PEOPLE.some((p) => p.id === id)) addPerson(list, id);
+function addPersonIfKnown(list: string[], id: string): void {
+  if (PEOPLE.some((p) => p.id === id)) addPerson(list, id);
 }
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * Rule-based reading of the sentence. Runs on every keystroke, never
- * throws, and ignores words it does not understand.
+ * throws, and ignores words it does not understand. `groups` are the
+ * visitor's saved groups, so `@launch-crew` expands to its members.
  */
-export function parseAsk(value: ComposerValue): ParsedAsk {
+export function parseAsk(value: ComposerValue, groups: Group[] = STARTER_GROUPS): ParsedAsk {
   const ask: ParsedAsk = { ...EMPTY_ASK, people: [] };
   let text = "";
 
@@ -142,8 +144,14 @@ export function parseAsk(value: ComposerValue): ParsedAsk {
       continue;
     }
     text += " ";
-    if (part.kind === "person" || part.kind === "team") addMention(ask.people, part.id);
-    if (part.kind === "group") for (const id of part.id.split("+")) addMention(ask.people, id);
+    if (part.kind === "person") addPersonIfKnown(ask.people, part.id);
+    if (part.kind === "team") {
+      // The live group wins; the members saved on the token cover a group deleted since.
+      const group = groups.find((g) => g.id === part.id);
+      const members = group?.members ?? part.data?.split(",") ?? [];
+      for (const id of members) addPersonIfKnown(ask.people, id);
+    }
+    if (part.kind === "group") for (const id of part.id.split("+")) addPersonIfKnown(ask.people, id);
     if (part.kind === "duration" && part.data) ask.durationMin = Number(part.data);
     if (part.kind === "type") ask.meetingType = part.label;
     if (part.kind === "repeat") ask.repeat = true;
@@ -157,9 +165,17 @@ export function parseAsk(value: ComposerValue): ParsedAsk {
     const first = person.name.split(" ")[0].toLowerCase();
     if (new RegExp(`\\b${first}\\b`).test(t)) addPerson(ask.people, person.id);
   }
-  for (const team of TEAMS) {
-    if (new RegExp(`\\b${team.id}( team)?\\b`).test(t) && /\bteam\b/.test(t))
-      addMention(ask.people, team.id);
+  // Groups typed as words: "@launch-crew", "the design team", or a multi-word
+  // name on its own ("launch crew"). A bare one-word name isn't enough:
+  // "design review" shouldn't pull in the Design group.
+  for (const group of groups) {
+    const lower = group.name.trim().toLowerCase();
+    const name = escapeRegExp(lower);
+    const named = lower.includes(" ")
+      ? new RegExp(`\\b${name}\\b`)
+      : new RegExp(`\\b${name} (group|team)\\b`);
+    if (new RegExp(`@${escapeRegExp(group.id)}\\b`).test(t) || named.test(t))
+      for (const id of group.members) addPersonIfKnown(ask.people, id);
   }
 
   // Duration.
