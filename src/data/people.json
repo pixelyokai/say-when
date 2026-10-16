@@ -1,0 +1,44 @@
+{
+  "people": [
+    {
+      "id": "lena",
+      "name": "Lena Hoffmann",
+      "role": "Product designer",
+      "city": "Berlin",
+      "timeZone": "Europe/Berlin",
+      "workStart": 540,
+      "workEnd": 1050
+    },
+    {
+      "id": "marcus",
+      "name": "Marcus Reed",
+      "role": "Engineering lead",
+      "city": "San Francisco",
+      "timeZone": "America/Los_Angeles",
+      "workStart": 540,
+      "workEnd": 1050
+    },
+    {
+      "id": "priya",
+      "name": "Priya Raman",
+      "role": "Frontend engineer",
+      "city": "Bengaluru",
+      "timeZone": "Asia/Kolkata",
+      "workStart": 600,
+      "workEnd": 1140
+    },
+    {
+      "id": "oliver",
+      "name": "Oliver Chen",
+      "role": "Design engineer",
+      "city": "Sydney",
+      "timeZone": "Australia/Sydney",
+      "workStart": 510,
+      "workEnd": 1020
+    }
+  ],
+  "teams": [
+    { "id": "design", "name": "Design team", "members": ["lena", "oliver"] },
+    { "id": "eng", "name": "Engineering team", "members": ["marcus", "priya"] }
+  ]
+}
