@@ -73,7 +73,7 @@ const SAMPLE: ComposerValue = [
   { type: "mention", id: "lena", label: "Lena", trigger: "@", kind: "person" },
   { type: "text", text: " and " },
   { type: "mention", id: "priya", label: "Priya", trigger: "@", kind: "person" },
-  { type: "text", text: " next week, afternoons their time" },
+  { type: "text", text: " next week, in the afternoon their time" },
 ];
 
 function repeatValue(habit: Habit): ComposerValue {
@@ -557,7 +557,7 @@ export function Booker() {
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12">
       <header className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <h1 className="font-heading font-semibold text-base">Book in one sentence</h1>
+          <h1 className="font-heading font-semibold text-base">Say When</h1>
           <Badge variant="outline">Concept</Badge>
         </div>
         <div className="flex items-center gap-2">

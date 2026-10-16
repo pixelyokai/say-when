@@ -70,7 +70,7 @@ export function GuestPoll() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-4 py-8 sm:py-12">
       <header className="flex items-center gap-2">
-        <h1 className="font-heading font-semibold text-base">Book in one sentence</h1>
+        <h1 className="font-heading font-semibold text-base">Say When</h1>
         <Badge variant="outline">Concept</Badge>
       </header>
 

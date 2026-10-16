@@ -7,11 +7,11 @@
   </a>
 </p>
 
-# calcom-experiment
+# Say When
 
-Book a meeting with people in other time zones by typing one sentence.
+Book a meeting with people in other time zones by typing one sentence. You say when, it works out the rest.
 
-This is a side project. I wanted to see what scheduling in Cal.com could feel like if you just wrote what you wanted, like "30 min with @lena and @priya next week, afternoons their time", and the page worked it out while you typed. It's an unofficial concept. It isn't made by Cal.com and isn't connected to them.
+This is a side project. I wanted to see what scheduling in Cal.com could feel like if you just wrote what you wanted, like "30 min with @lena and @priya next week, in the afternoon their time", and the page worked it out while you typed. It's an unofficial concept. It isn't made by Cal.com and isn't connected to them.
 
 ## What it does
 

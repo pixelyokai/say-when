@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "Book in one sentence",
+  title: "Say When",
   description:
     "Book a meeting across time zones by typing one sentence. An unofficial Cal.com concept built with coss ui.",
 };

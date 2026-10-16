@@ -335,7 +335,7 @@ export function AskComposer({
       <ComposerInput
         aria-label="Describe the meeting"
         autoFocus
-        placeholder="30 min with @lena and @priya next week, afternoons their time"
+        placeholder="30 min with @lena and @priya next week, in the afternoon their time"
         renderToken={(token: ComposerTokenPart) => (
           <ComposerToken icon={tokenIcon(token.kind, token.id)} token={token} variant="chip" />
         )}
