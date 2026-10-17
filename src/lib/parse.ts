@@ -1,3 +1,4 @@
+import * as chrono from "chrono-node";
 import type { ComposerValue } from "@/components/ui/composer";
 import { type Group, STARTER_GROUPS } from "@/lib/groups";
 import { type DaysSpec, PEOPLE, type WindowSpec } from "@/lib/schedule";
@@ -18,6 +19,10 @@ export type ParsedAsk = {
   repeat: boolean;
   /** A specific calendar date: "YYYY-MM-DD", or "--MM-DD" when no year was given. Wins over `days`. */
   date: string | null;
+  /** Words the parser did not use, so the page can say so instead of silently dropping them. */
+  unread: string[];
+  /** Guesses made on the visitor's behalf ("5/6 read as 5 Jun"), shown so they can be corrected. */
+  notes: string[];
 };
 
 export const EMPTY_ASK: ParsedAsk = {
@@ -31,7 +36,23 @@ export const EMPTY_ASK: ParsedAsk = {
   timeOf: null,
   repeat: false,
   date: null,
+  unread: [],
+  notes: [],
 };
+
+/** Words that carry no scheduling meaning, or that the rules above already read. */
+const UNDERSTOOD = new Set(
+  (
+    "a an the and or but with for on at in to of by my me i we our us you your their theirs mine time local " +
+    "call meeting meet chat sync catch up please can could lets set book schedule find need want would like " +
+    "some sometime any anytime around after before from until next this week weeks today tomorrow day days " +
+    "morning mornings afternoon afternoons evening evenings lunch noon midday quick half hour hours hr hrs " +
+    "min mins minute minutes h m am pm same as last usual again video zoom phone person coffee is are be it " +
+    "that team group everyone all early late of s st nd rd th mon tue tues wed thu thur thurs fri sat sun " +
+    "monday tuesday wednesday thursday friday saturday sunday january february march april may june july " +
+    "august september october november december jan feb mar apr jun jul aug sep sept oct nov dec"
+  ).split(" "),
+);
 
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 const MONTH = "(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
@@ -127,7 +148,36 @@ function addPersonIfKnown(list: string[], id: string): void {
   if (PEOPLE.some((p) => p.id === id)) addPerson(list, id);
 }
 
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** Fallback for dates the rules above do not cover. Only fills gaps, never overrides. */
+function readWithChrono(text: string, ask: ParsedAsk): string {
+  const hit = chrono.casual.parse(text, new Date(), { forwardDate: true })[0];
+  if (!hit) return "";
+  const { start } = hit;
+  if (!start.isCertain("day") && !start.isCertain("weekday")) return "";
+  ask.date = `${start.get("year")}-${pad(start.get("month")!)}-${pad(start.get("day")!)}`;
+  if (!ask.time && start.isCertain("hour"))
+    ask.time = { kind: "at", minutes: start.get("hour")! * 60 + (start.get("minute") ?? 0) };
+  return hit.text.toLowerCase();
+}
+
+/** Words in the sentence that nothing above recognized. Digits are left alone. */
+function findUnread(t: string, known: string, groups: Group[]): string[] {
+  const names = new Set<string>();
+  for (const p of PEOPLE) {
+    for (const w of `${p.name} ${p.city}`.toLowerCase().split(/\s+/)) names.add(w);
+  }
+  for (const g of groups) for (const w of `${g.name} ${g.id}`.toLowerCase().split(/[\s-]+/)) names.add(w);
+  const used = new Set(known.match(/[a-z]+/g) ?? []);
+  const unread: string[] = [];
+  for (const raw of t.match(/[a-z][a-z'’]*/g) ?? []) {
+    const word = raw.replace(/['’]s$/, "");
+    if (word.length < 2 || UNDERSTOOD.has(word) || names.has(word) || used.has(word)) continue;
+    if (!unread.includes(word)) unread.push(word);
+  }
+  return unread.slice(0, 3);
+}
+
+const escapeRegExp =(text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * Rule-based reading of the sentence. Runs on every keystroke, never
@@ -135,7 +185,7 @@ const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&
  * visitor's saved groups, so `@launch-crew` expands to its members.
  */
 export function parseAsk(value: ComposerValue, groups: Group[] = STARTER_GROUPS): ParsedAsk {
-  const ask: ParsedAsk = { ...EMPTY_ASK, people: [] };
+  const ask: ParsedAsk = { ...EMPTY_ASK, people: [], unread: [], notes: [] };
   let text = "";
 
   for (const part of value) {
@@ -197,7 +247,7 @@ export function parseAsk(value: ComposerValue, groups: Group[] = STARTER_GROUPS)
   // Days.
   if (/\bnext week\b/.test(t)) ask.days = "next-week";
   else if (/\bthis week\b/.test(t)) ask.days = "this-week";
-  else if (/\btomorrow\b/.test(t)) ask.days = "tomorrow";
+  else if (/(?<!after )\btomorrow\b/.test(t)) ask.days = "tomorrow";
   else if (/\btoday\b/.test(t)) ask.days = "today";
   else {
     const day = WEEKDAYS.find(([re]) => re.test(t));
@@ -228,6 +278,22 @@ export function parseAsk(value: ComposerValue, groups: Group[] = STARTER_GROUPS)
     if (!ask.timeOf && ask.timezone === "theirs" && ask.people.length === 1)
       ask.timeOf = ask.people[0];
   }
+
+  // What the rules missed ("in 2 weeks", "day after tomorrow", "next friday"), chrono reads.
+  let known = "";
+  if (!ask.date && !ask.days) known = readWithChrono(t, ask);
+
+  // Say out loud the guesses made above, so they can be corrected.
+  const slash = t.match(/\b(\d{1,2})\/(\d{1,2})\b/);
+  if (slash && ask.date) {
+    const [a, b] = [Number(slash[1]), Number(slash[2])];
+    if (a <= 12 && b <= 12 && a !== b)
+      ask.notes.push(`${slash[0]} read as ${a} ${MONTHS[b - 1]}`);
+  }
+  if (ask.time && /\b(at|around|after|before)\s+\d{1,2}\b(?!\s*(?::|am|pm|a\b|p\b|min|h))/.test(t))
+    ask.notes.push(`"${t.match(/\b(?:at|around|after|before)\s+\d{1,2}\b/)![0]}" read as ${Math.floor(ask.time.minutes / 60) % 12 || 12}${ask.time.minutes >= 720 ? " pm" : " am"}`);
+
+  ask.unread = findUnread(t, known, groups);
 
   // Meeting type typed as words.
   if (!ask.meetingType) {

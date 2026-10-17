@@ -1,6 +1,6 @@
 "use client";
 
-import { CommandIcon, HistoryIcon, SparklesIcon, TriangleAlertIcon, UsersRoundIcon, XIcon } from "lucide-react";
+import { CalendarIcon, CommandIcon, HistoryIcon, SparklesIcon, TriangleAlertIcon, UsersRoundIcon, XIcon } from "lucide-react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -107,7 +107,14 @@ function withDate(value: ComposerValue, date: Date): ComposerValue {
   return [...value, lead, token, { type: "text", text: " " }];
 }
 
-const CITY_KEY = "book-in-one-sentence:city";
+/** Appends a word to the sentence, with the spacing it needs. */
+function withText(value: ComposerValue, word: string): ComposerValue {
+  const last = value.at(-1);
+  const space = !last || (last.type === "text" && /\s$/.test(last.text)) ? "" : " ";
+  return [...value, { type: "text", text: `${space}${word} ` }];
+}
+
+const CITY_KEY ="book-in-one-sentence:city";
 
 const DURATION_TEXT = /\d+(?:\.\d+)?\s*(?:minutes?|mins?|m|hours?|hrs?|h)\b/i;
 
@@ -609,6 +616,14 @@ export function Booker() {
               {chip}
             </Badge>
           ))}
+          {parsed.notes.map((note) => (
+            <Badge key={note} variant="info">
+              {note}
+            </Badge>
+          ))}
+          {parsed.unread.length > 0 && (
+            <Badge variant="outline">not used: {parsed.unread.join(", ")}</Badge>
+          )}
           {typed.repeat && (
             <Badge variant={repeatOf ? "info" : "outline"}>
               <HistoryIcon aria-hidden="true" />
@@ -698,6 +713,24 @@ export function Booker() {
         </Empty>
       ) : (
         <>
+          {!parsed.date && !parsed.days && !parsed.time && !parsed.repeat && (
+            <Alert className="enter-motion" variant="info">
+              <CalendarIcon />
+              <AlertTitle>Which day?</AlertTitle>
+              <AlertDescription>
+                No day in the sentence, so these are the next five weekdays.
+              </AlertDescription>
+              <AlertAction>
+                <div className="flex gap-1.5">
+                  {["today", "tomorrow", "next week"].map((when) => (
+                    <Button key={when} onClick={() => setValue((v) => withText(v, when))} size="sm" variant="outline">
+                      {when}
+                    </Button>
+                  ))}
+                </div>
+              </AlertAction>
+            </Alert>
+          )}
           {suggestion && (
             <Alert className="enter-motion" variant="warning">
               <TriangleAlertIcon />

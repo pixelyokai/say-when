@@ -24,6 +24,11 @@ const sentences = [
   "marcus 24/10",
   "lena and oliver on the 28th",
   "priya 2026-11-03 afternoon",
+  "lena the day after tomorrow",
+  "marcus in 2 weeks",
+  "oliver next friday at 2pm",
+  "lena 5/6 at 3",
+  "2h workshop with priya sometime after my kid's school run",
 ];
 const viewer = makeViewer("Asia/Kolkata");
 const now = Date.now();
